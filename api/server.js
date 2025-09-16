@@ -2,9 +2,9 @@ const express = require('express');
 const dotenv = require('dotenv');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const db = require('./models');
-const authRoutes = require('./routes/auth');
-const missionRoutes = require('./routes/missions');
+const db = require('../models');
+const authRoutes = require('../routes/auth');
+const missionRoutes = require('../routes/missions');
 
 dotenv.config();
 
