@@ -1,11 +1,10 @@
-// server.js
-import express from 'express';
-import dotenv from 'dotenv';
-import bodyParser from 'body-parser';
-import cors from 'cors';
-import db from './models/index.js';
-import authRoutes from './routes/auth.js';
-import missionRoutes from './routes/missions.js';
+const express = require('express');
+const dotenv = require('dotenv');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+const db = require('./models');
+const authRoutes = require('./routes/auth');
+const missionRoutes = require('./routes/missions');
 
 dotenv.config();
 
@@ -17,6 +16,7 @@ app.use(bodyParser.json());
 
 app.use('/api/auth', authRoutes);
 app.use('/api/missions', missionRoutes);
+
 app.get('/', (req, res) => res.json({ ok: true, message: 'Missions API up' }));
 
 (async () => {

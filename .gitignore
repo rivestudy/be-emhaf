@@ -1,3 +1,4 @@
 .env
 test.html
 node_modules/
+.vercel

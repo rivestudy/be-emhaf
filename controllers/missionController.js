@@ -1,11 +1,11 @@
-import db from "../models/index.js";
-import { Op } from "sequelize";
+const db = require('../models');
+const { Op } = require('sequelize');
 
 const { Mission, CompletedMission } = db;
 
 function haversineDistance(lat1, lon1, lat2, lon2) {
   const toRad = (deg) => (deg * Math.PI) / 180;
-  const R = 6371000; 
+  const R = 6371000;
 
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
@@ -18,7 +18,7 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
-export const postScan = async (req, res) => {
+async function postScan(req, res) {
   try {
     const { scan_code, scan_lat, scan_lon, user_id } = req.body;
     const authUserId = req.user.id;
@@ -32,31 +32,18 @@ export const postScan = async (req, res) => {
       return res.status(400).json({ message: "scan_lat and scan_lon required" });
     }
 
-    // 🔎 Find mission by scan_code
-    const mission = await Mission.findOne({
-      where: { mission_code: scan_code },
-    });
-
+    const mission = await Mission.findOne({ where: { mission_code: scan_code } });
     if (!mission) {
       return res.status(404).json({ message: "Mission not found for provided scan_code" });
     }
 
-    // ✅ Check if already completed
     const alreadyCompleted = await CompletedMission.findOne({
-      where: {
-        user_id: user_id,
-        mission_id: mission.mission_id,
-        status: "completed",
-      },
+      where: { user_id, mission_id: mission.mission_id, status: "completed" },
     });
-
     if (alreadyCompleted) {
-      return res.status(400).json({
-        message: "Mission already completed by this user",
-      });
+      return res.status(400).json({ message: "Mission already completed by this user" });
     }
 
-    // 📏 Distance validation
     const distance = haversineDistance(
       parseFloat(scan_lat),
       parseFloat(scan_lon),
@@ -70,7 +57,6 @@ export const postScan = async (req, res) => {
       });
     }
 
-    // ✅ Save completed mission
     const completed = await CompletedMission.create({
       user_id,
       mission_id: mission.mission_id,
@@ -85,13 +71,11 @@ export const postScan = async (req, res) => {
     console.error("postScan error", err);
     return res.status(500).json({ message: "Server error", error: err.message });
   }
-};
+}
 
-
-export const getAllMissions = async (req, res) => {
+async function getAllMissions(req, res) {
   try {
     const { user_id } = req.params;
-
     const missions = await Mission.findAll();
 
     const results = await Promise.all(
@@ -115,9 +99,9 @@ export const getAllMissions = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: "Error fetching missions", error: err.message });
   }
-};
+}
 
-export const getNextMission = async (req, res) => {
+async function getNextMission(req, res) {
   try {
     const { user_id } = req.params;
 
@@ -143,17 +127,16 @@ export const getNextMission = async (req, res) => {
       mission_image: nextMission.mission_image,
       mission_lat: nextMission.mission_lat,
       mission_lon: nextMission.mission_lon,
-      mission_difficulty: nextMission.mission_difficulty
+      mission_difficulty: nextMission.mission_difficulty,
     });
   } catch (err) {
     res.status(500).json({ message: "Error fetching next mission", error: err.message });
   }
-};
+}
 
-// 📌 Get missions by category & difficulty (with user status)
-export const getMissionsByFilter = async (req, res) => {
+async function getMissionsByFilter(req, res) {
   try {
-    const { category, difficulty, user_id } = req.query; // ✅ include user_id in query
+    const { category, difficulty, user_id } = req.query;
 
     if (!user_id) {
       return res.status(400).json({ message: "user_id is required" });
@@ -176,7 +159,7 @@ export const getMissionsByFilter = async (req, res) => {
           mission_name: m.mission_name,
           mission_desc: m.mission_description,
           mission_image: m.mission_image,
-          mission_status: completed ? completed.status : "not started", // ✅ added status check
+          mission_status: completed ? completed.status : "not started",
           mission_difficulty: m.mission_difficulty,
           mission_category: m.mission_category,
         };
@@ -187,4 +170,6 @@ export const getMissionsByFilter = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: "Error filtering missions", error: err.message });
   }
-};
+}
+
+module.exports = { postScan, getAllMissions, getNextMission, getMissionsByFilter };

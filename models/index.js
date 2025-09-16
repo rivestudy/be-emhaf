@@ -1,9 +1,9 @@
-import Sequelize from 'sequelize';
-import sequelize from '../config/database.js';
+const Sequelize = require('sequelize');
+const sequelize = require('../config/database');
 
-import UserModel from './user.js';
-import MissionModel from './missions.js';
-import CompletedMissionModel from './completed_mission.js';
+const UserModel = require('./user');
+const MissionModel = require('./missions');
+const CompletedMissionModel = require('./completed_mission');
 
 const User = UserModel(sequelize, Sequelize.DataTypes);
 const Mission = MissionModel(sequelize, Sequelize.DataTypes);
@@ -23,4 +23,4 @@ const db = {
   CompletedMission
 };
 
-export default db;
+module.exports = db;

@@ -1,5 +1,4 @@
-// /models/completed_mission.js
-export default (sequelize, DataTypes) => {
+module.exports = (sequelize, DataTypes) => {
   const CompletedMission = sequelize.define('completed_missions', {
     completed_id: {
       type: DataTypes.INTEGER,

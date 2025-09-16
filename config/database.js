@@ -1,5 +1,5 @@
-import { Sequelize } from 'sequelize';
-import dotenv from 'dotenv';
+const { Sequelize } = require('sequelize');
+const dotenv = require('dotenv');
 dotenv.config();
 
 const {
@@ -14,7 +14,7 @@ const sequelize = new Sequelize(DB_NAME, DB_USERNAME, DB_PASSWORD, {
   host: DB_HOST || 'localhost',
   port: DB_PORT ? parseInt(DB_PORT) : 3306,
   dialect: 'mysql',
-  logging: false, 
+  logging: false,
   pool: {
     max: 10,
     min: 0,
@@ -27,4 +27,4 @@ const sequelize = new Sequelize(DB_NAME, DB_USERNAME, DB_PASSWORD, {
   }
 });
 
-export default sequelize;
+module.exports = sequelize;

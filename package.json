@@ -4,7 +4,7 @@
   "description": "Express API for missions with JWT auth and Sequelize (MySQL)",
   "main": "server.js",
   "scripts": {
-    "start": "node server",
+    "start": "node server.js",
     "dev": "nodemon server.js"
   },
   "dependencies": {
