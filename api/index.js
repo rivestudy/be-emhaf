@@ -5,6 +5,8 @@ const cors = require('cors');
 const db = require('../models');
 const authRoutes = require('../routes/auth');
 const missionRoutes = require('../routes/missions');
+const voucherRoutes = require('../routes/voucher');
+const userRoutes = require('../routes/user');
 
 dotenv.config();
 
@@ -15,7 +17,9 @@ app.use(cors());
 app.use(bodyParser.json());
 
 app.use('/api/auth', authRoutes);
+app.use('/api/vouchers', voucherRoutes);
 app.use('/api/missions', missionRoutes);
+app.use('/api/users', userRoutes);
 
 app.get('/', (req, res) => res.json({ ok: true, message: 'Missions API up' }));
 

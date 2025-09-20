@@ -22,6 +22,12 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(255),
       allowNull: true,
       unique: true
+    },
+    diamond_balance: {
+      type: DataTypes.INTEGER(255),
+      allowNull: false,
+      unique: false,
+      defaultValue: 0
     }
   }, {
     tableName: 'users',

@@ -1,7 +1,7 @@
 const db = require('../models');
 const { Op } = require('sequelize');
 
-const { Mission, CompletedMission } = db;
+const { Mission, CompletedMission, User, DiamondTransaction, sequelize  } = db;
 
 function haversineDistance(lat1, lon1, lat2, lon2) {
   const toRad = (deg) => (deg * Math.PI) / 180;
@@ -19,6 +19,7 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
 }
 
 async function postScan(req, res) {
+  const t = await sequelize.transaction();
   try {
     const { scan_code, scan_lat, scan_lon, user_id } = req.body;
     const authUserId = req.user.id;
@@ -26,10 +27,8 @@ async function postScan(req, res) {
     if (parseInt(user_id) !== parseInt(authUserId)) {
       return res.status(403).json({ message: "Forbidden: token user mismatch" });
     }
-
-    if (!scan_code) return res.status(400).json({ message: "scan_code required" });
-    if (!scan_lat || !scan_lon) {
-      return res.status(400).json({ message: "scan_lat and scan_lon required" });
+    if (!scan_code || !scan_lat || !scan_lon) {
+      return res.status(400).json({ message: "scan_code, scan_lat, and scan_lon are required" });
     }
 
     const mission = await Mission.findOne({ where: { mission_code: scan_code } });
@@ -37,24 +36,14 @@ async function postScan(req, res) {
       return res.status(404).json({ message: "Mission not found for provided scan_code" });
     }
 
-    const alreadyCompleted = await CompletedMission.findOne({
-      where: { user_id, mission_id: mission.mission_id, status: "completed" },
-    });
+    const alreadyCompleted = await CompletedMission.findOne({ where: { user_id, mission_id: mission.mission_id, status: "completed" } });
     if (alreadyCompleted) {
       return res.status(400).json({ message: "Mission already completed by this user" });
     }
 
-    const distance = haversineDistance(
-      parseFloat(scan_lat),
-      parseFloat(scan_lon),
-      parseFloat(mission.mission_lat),
-      parseFloat(mission.mission_lon)
-    );
-
+    const distance = haversineDistance(parseFloat(scan_lat), parseFloat(scan_lon), parseFloat(mission.mission_lat), parseFloat(mission.mission_lon));
     if (distance > 50) {
-      return res.status(400).json({
-        message: `Too far from mission location (distance: ${Math.round(distance)}m)`,
-      });
+      return res.status(400).json({ message: `Too far from mission location (distance: ${Math.round(distance)}m)` });
     }
 
     const completed = await CompletedMission.create({
@@ -64,14 +53,31 @@ async function postScan(req, res) {
       scan_code: String(scan_code),
       scan_lat,
       scan_lon,
-    });
+    }, { transaction: t });
 
-    return res.status(201).json({ message: "Scan recorded", completed });
+    if (mission.diamond_reward > 0) {
+      await User.increment({ diamond_balance: mission.diamond_reward }, { where: { user_id }, transaction: t });
+      await DiamondTransaction.create({
+        user_id,
+        amount: mission.diamond_reward,
+        transaction_type: 'mission_complete',
+        source_id: mission.mission_id,
+      }, { transaction: t });
+    }
+
+    await t.commit();
+    return res.status(201).json({
+      message: "Scan recorded and rewards granted!",
+      completed,
+      rewarded_diamonds: mission.diamond_reward
+    });
   } catch (err) {
+    await t.rollback();
     console.error("postScan error", err);
     return res.status(500).json({ message: "Server error", error: err.message });
   }
 }
+
 
 async function getAllMissions(req, res) {
   try {

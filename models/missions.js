@@ -40,6 +40,11 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       unique: true,
     },
+    diamond_reward: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    }
   }, {
     tableName: "missions",
     timestamps: false,
