@@ -1,9 +1,9 @@
 const Sequelize = require('sequelize');
 const sequelize = require('../config/database');
 
-const UserModel = require('./User');
-const MissionModel = require('./missions'); // Assuming your filename is 'missions.js'
-const CompletedMissionModel = require('./completed_mission'); // Assuming 'completed_mission.js'
+const UserModel = require('./user');
+const MissionModel = require('./missions'); 
+const CompletedMissionModel = require('./completed_mission'); 
 
 const DiamondTransactionModel = require('./transaction');
 const VoucherModel = require('./voucher');

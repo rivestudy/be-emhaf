@@ -1,4 +1,5 @@
 const { User, Voucher, RedeemedVoucher, DiamondTransaction, sequelize } = require('../models');
+const voucher = require('../models/voucher');
 
 async function getAllVouchers(req, res) {
   try {
@@ -77,8 +78,46 @@ async function redeemVoucher(req, res) {
   }
 }
 
+async function claimVoucher(req, res) {
+  const t = await sequelize.transaction();
+  try {
+    const redemption_id = req.params.redemption_id; 
+    const user_id = req.user.id;
+
+    const redemption = await RedeemedVoucher.findOne({
+      where: { redemption_id, user_id }, 
+      transaction: t,
+      lock: true,
+    });
+    console.log(redemption_id);
+    console.log(user_id);
+
+    if (!redemption) {
+      await t.rollback();
+      return res.status(404).json({ message: "Redeemed voucher not found" });
+    }
+
+    if (redemption.voucher_status === true) {
+      await t.rollback();
+      return res.status(400).json({ message: "Voucher has already been claimed" });
+    }
+    redemption.voucher_status = true;
+    await redemption.save({ transaction: t });
+
+    await t.commit();
+    res.status(200).json({ message: "Voucher claimed successfully!", redemption });
+  } catch (err) {
+    await t.rollback();
+    console.error("claimVoucher error", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+}
+
+
+
 module.exports = {
   getAllVouchers,
   getVoucherById,
   redeemVoucher,
+  claimVoucher,
 };

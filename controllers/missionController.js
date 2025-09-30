@@ -25,7 +25,7 @@ async function postScan(req, res) {
     const authUserId = req.user.id;
 
     if (parseInt(user_id) !== parseInt(authUserId)) {
-      return res.status(403).json({ message: "Forbidden: token user mismatch" });
+      return res.status(403).json({ message: "Sesi Login tidak Valid" });
     }
     if (!scan_code || !scan_lat || !scan_lon) {
       return res.status(400).json({ message: "scan_code, scan_lat, and scan_lon are required" });

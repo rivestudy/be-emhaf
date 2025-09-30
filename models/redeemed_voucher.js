@@ -13,6 +13,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+    voucher_status: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+    },
   }, {
     tableName: 'redeemed_vouchers',
     timestamps: true,
