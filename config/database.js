@@ -16,7 +16,7 @@ const sequelize = new Sequelize(DB_NAME, DB_USERNAME, DB_PASSWORD, {
   dialect: 'mysql',
   logging: false,
   pool: {
-    max: 10,
+    max: 15,
     min: 0,
     acquire: 30000,
     idle: 10000

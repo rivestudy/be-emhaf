@@ -1,56 +1,76 @@
-const multer = require("multer");
-const fs = require("fs");
-const path = require("path");
+const multer = require('multer');
+const fs = require('fs').promises;
+const path = require('path');
 
-const uploadDir = path.join(__dirname, "../uploads");
+const uploadDir = path.join(__dirname, '../uploads');
 
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
-}
+(async () => {
+  try {
+    await fs.mkdir(uploadDir, { recursive: true });
+  } catch (err) {
+    console.error('Gagal membuat folder upload:', err);
+  }
+})();
 
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => {
+  destination: (_, __, cb) => cb(null, uploadDir),
+  filename: (_, file, cb) => {
     const now = new Date();
-    const pad = (n) => n.toString().padStart(2, "0");
-    const datetime = 
+    const pad = (n) => n.toString().padStart(2, '0');
+    const datetime =
       now.getFullYear().toString() +
       pad(now.getMonth() + 1) +
       pad(now.getDate()) +
       pad(now.getHours()) +
       pad(now.getMinutes()) +
       pad(now.getSeconds());
-    
-    cb(null, `${datetime}.png`);
+
+    cb(null, `${datetime}_${file.originalname.replace(/\s+/g, '_')}`);
   },
 });
-
 
 const upload = multer({ storage });
 
 async function uploadFile(req, res) {
-  if (!req.file) {
-    return res.status(400).json({ message: "No file uploaded" });
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'Tidak ada file yang diunggah.' });
+    }
+
+    res.status(200).json({
+      message: 'File berhasil diunggah!',
+      filename: req.file.filename,
+      url: `/cdn/${req.file.filename}`,
+    });
+  } catch (err) {
+    console.error('uploadFile error', err);
+    res.status(500).json({ message: 'Terjadi kesalahan saat mengunggah file.' });
   }
-  res.json({
-    message: "File uploaded successfully",
-    filename: req.file.filename,
-    url: `/cdn/${req.file.filename}`,
-  });
 }
 
 async function listFiles(req, res) {
-  const files = fs.readdirSync(uploadDir);
-  res.json(files);
+  try {
+    const files = await fs.readdir(uploadDir);
+    res.status(200).json(files);
+  } catch (err) {
+    console.error('listFiles error', err);
+    res.status(500).json({ message: 'Gagal membaca daftar file.' });
+  }
 }
 
 async function deleteFile(req, res) {
-  const filePath = path.join(uploadDir, req.params.filename);
-  if (fs.existsSync(filePath)) {
-    fs.unlinkSync(filePath);
-    res.json({ message: "File deleted successfully" });
-  } else {
-    res.status(404).json({ message: "File not found" });
+  try {
+    const filePath = path.join(uploadDir, req.params.filename);
+    await fs.access(filePath); 
+    await fs.unlink(filePath);
+
+    res.status(200).json({ message: 'File berhasil dihapus.' });
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      return res.status(404).json({ message: 'File tidak ditemukan.' });
+    }
+    console.error('deleteFile error', err);
+    res.status(500).json({ message: 'Terjadi kesalahan saat menghapus file.' });
   }
 }
 

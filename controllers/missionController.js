@@ -19,64 +19,67 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
 }
 
 async function postScan(req, res) {
-  const t = await sequelize.transaction();
   try {
     const { scan_code, scan_lat, scan_lon, user_id } = req.body;
     const authUserId = req.user.id;
 
     if (parseInt(user_id) !== parseInt(authUserId)) {
-      return res.status(403).json({ message: "Sesi Login tidak Valid" });
+      return res.status(403).json({ message: "Sesi Login tidak Valid!" });
     }
     if (!scan_code || !scan_lat || !scan_lon) {
-      return res.status(400).json({ message: "scan_code, scan_lat, and scan_lon are required" });
+      return res.status(400).json({ message: "Data Tidak Valid!" });
     }
 
-    const mission = await Mission.findOne({ where: { mission_code: scan_code } });
-    if (!mission) {
-      return res.status(404).json({ message: "Mission not found for provided scan_code" });
-    }
+    const result = await sequelize.transaction(async (t) => {
+      const mission = await Mission.findOne({ where: { mission_code: scan_code } }, { transaction: t });
+      if (!mission) throw new Error("Kode Misi Tidak Valid!");
 
-    const alreadyCompleted = await CompletedMission.findOne({ where: { user_id, mission_id: mission.mission_id, status: "completed" } });
-    if (alreadyCompleted) {
-      return res.status(400).json({ message: "Mission already completed by this user" });
-    }
+      const alreadyCompleted = await CompletedMission.findOne(
+        { where: { user_id, mission_id: mission.mission_id, status: "completed" } },
+        { transaction: t }
+      );
+      if (alreadyCompleted) throw new Error("Misi telah diselesaikan sebelumnya!");
 
-    const distance = haversineDistance(parseFloat(scan_lat), parseFloat(scan_lon), parseFloat(mission.mission_lat), parseFloat(mission.mission_lon));
-    if (distance > 50) {
-      return res.status(400).json({ message: `Too far from mission location (distance: ${Math.round(distance)}m)` });
-    }
+      const distance = haversineDistance(
+        parseFloat(scan_lat),
+        parseFloat(scan_lon),
+        parseFloat(mission.mission_lat),
+        parseFloat(mission.mission_lon)
+      );
+      if (distance > 50) throw new Error(`Terlalu jauh dari lokasi! Mohon datang ke lokasi misi. ${Math.round(distance)}m)`);
 
-    const completed = await CompletedMission.create({
-      user_id,
-      mission_id: mission.mission_id,
-      status: "completed",
-      scan_code: String(scan_code),
-      scan_lat,
-      scan_lon,
-    }, { transaction: t });
+      const completed = await CompletedMission.create(
+        { user_id, mission_id: mission.mission_id, status: "completed", scan_code: String(scan_code), scan_lat, scan_lon },
+        { transaction: t }
+      );
 
-    if (mission.diamond_reward > 0) {
-      await User.increment({ diamond_balance: mission.diamond_reward }, { where: { user_id }, transaction: t });
-      await DiamondTransaction.create({
-        user_id,
-        amount: mission.diamond_reward,
-        transaction_type: 'mission_complete',
-        source_id: mission.mission_id,
-      }, { transaction: t });
-    }
+      if (mission.diamond_reward > 0) {
+        await User.increment({ diamond_balance: mission.diamond_reward }, { where: { user_id }, transaction: t });
+        await DiamondTransaction.create(
+          {
+            user_id,
+            amount: mission.diamond_reward,
+            transaction_type: "mission_complete",
+            source_id: mission.mission_id,
+          },
+          { transaction: t }
+        );
+      }
 
-    await t.commit();
+      return { completed, rewarded_diamonds: mission.diamond_reward };
+    });
+
     return res.status(201).json({
-      message: "Scan recorded and rewards granted!",
-      completed,
-      rewarded_diamonds: mission.diamond_reward
+      message: "Scan berhasil, misi selesai!",
+      completed: result.completed,
+      rewarded_diamonds: result.rewarded_diamonds,
     });
   } catch (err) {
-    await t.rollback();
     console.error("postScan error", err);
     return res.status(500).json({ message: "Server error", error: err.message });
   }
 }
+
 
 
 async function getAllMissions(req, res) {
