@@ -23,6 +23,11 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       unique: true
     },
+    user_img: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      
+    },
     diamond_balance: {
       type: DataTypes.INTEGER(255),
       allowNull: false,
